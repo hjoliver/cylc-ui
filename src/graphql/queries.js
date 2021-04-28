@@ -27,6 +27,7 @@ import { DocumentNode } from 'graphql'
 /**
  * @type {DocumentNode}
  */
+
 const WORKFLOW_TREE_DELTAS_SUBSCRIPTION = gql`
 subscription OnWorkflowDeltasData ($workflowId: ID) {
   deltas (workflows: [$workflowId], stripNull: true) {
@@ -172,6 +173,151 @@ fragment JobData on Job {
 # WORKFLOW DATA END
 `
 
+const WORKFLOW_CHEESE_DELTAS_SUBSCRIPTION = gql`
+subscription OnWorkflowDeltasData ($workflowId: ID) {
+  deltas (workflows: [$workflowId], stripNull: true) {
+   ...WorkflowCheeseDeltas
+  }
+}
+
+# CHEESE DELTAS BEGIN
+
+fragment WorkflowCheeseDeltas on Deltas {
+  id
+  shutdown
+  added {
+    ...WorkflowCheeseAddedData
+  }
+  updated {
+    ...WorkflowCheeseUpdatedData
+  }
+  pruned {
+    ...WorkflowCheesePrunedData
+  }
+}
+
+fragment WorkflowCheeseAddedData on Added {
+  workflow {
+    ...WorkflowData
+    cyclePoints: familyProxies (ids: ["root"], ghosts: true) {
+      ...CyclePointData
+    }
+    taskProxies (sort: { keys: ["name"], reverse: false }, ghosts: true) {
+      ...TaskProxyData
+      jobs(sort: { keys: ["submit_num"], reverse:true }) {
+        ...JobData
+      }
+    }
+    familyProxies (exids: ["root"], sort: { keys: ["name"] }, ghosts: true) {
+      ...FamilyProxyData
+    }
+  }
+  cyclePoints: familyProxies (ids: ["root"], ghosts: true) {
+    ...CyclePointData
+  }
+  familyProxies (exids: ["root"], sort: { keys: ["name"] }, ghosts: true) {
+    ...FamilyProxyData
+  }
+  taskProxies (sort: { keys: ["name"], reverse: false }, ghosts: true) {
+    ...TaskProxyData
+  }
+  jobs (sort: { keys: ["submit_num"], reverse:true }) {
+    ...JobData
+  }
+}
+
+fragment WorkflowCheeseUpdatedData on Updated {
+  taskProxies (ghosts: true) {
+    ...TaskProxyData
+  }
+  jobs {
+    ...JobData
+  }
+  familyProxies (exids: ["root"], ghosts: true) {
+    ...FamilyProxyData
+  }
+}
+
+fragment WorkflowCheesePrunedData on Pruned {
+  jobs
+  taskProxies
+  familyProxies
+}
+
+# CHEESE DELTAS END
+
+# WORKFLOW DATA BEGIN
+
+fragment WorkflowData on Workflow {
+  id
+  name
+  status
+  owner
+  host
+  port
+}
+
+fragment CyclePointData on FamilyProxy {
+  id
+  cyclePoint
+}
+
+fragment FamilyProxyData on FamilyProxy {
+  id
+  name
+  state
+  cyclePoint
+  firstParent {
+    id
+    name
+    cyclePoint
+    state
+  }
+}
+
+fragment TaskProxyData on TaskProxy {
+  id
+  name
+  state
+  isHeld
+  isQueued
+  cyclePoint
+  firstParent {
+    id
+    name
+    cyclePoint
+    state
+  }
+  task {
+    meanElapsedTime
+    name
+  }
+}
+
+fragment JobData on Job {
+  id
+  firstParent: taskProxy {
+    id
+  }
+  jobRunnerName
+  jobId
+  platform
+  startedTime
+  submittedTime
+  finishedTime
+  state
+  submitNum
+  taskProxy {
+    outputs (satisfied: true, sort: { keys: ["time"], reverse: true}) {
+      label
+      message
+    }
+  }
+}
+
+# WORKFLOW DATA END
+`
+
 /**
  * Query used to retrieve data for the application Dashboard.
  * @type {string}
@@ -229,6 +375,7 @@ const WORKFLOWS_TABLE_QUERY = `
 
 export {
   WORKFLOW_TREE_DELTAS_SUBSCRIPTION,
+  WORKFLOW_CHEESE_DELTAS_SUBSCRIPTION,
   DASHBOARD_QUERY,
   GSCAN_QUERY,
   WORKFLOWS_TABLE_QUERY

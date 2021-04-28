@@ -39,6 +39,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             :workflows="tree.root.children"
           />
         </v-skeleton-loader>
+        <v-skeleton-loader
+          v-for="widgetId of cheeseWidgets"
+          :key="widgetId"
+          :id="widgetId"
+          :loading="isLoading"
+          type="list-item-three-line"
+          tab-title="cheese"
+        >
+          <cheese-component
+            :workflows="cheese.root.children"
+          />
+        </v-skeleton-loader>
         <mutations-view
           v-for="widgetId of mutationsWidgets"
           :key="widgetId"
@@ -54,14 +66,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 <script>
 import { mixin } from '@/mixins'
 import { datatree } from '@/mixins/treeview'
+import { datacheese } from '@/mixins/cheeseview'
 import { mapState } from 'vuex'
 import Lumino from '@/components/cylc/workflow/Lumino'
-import { WORKFLOW_TREE_DELTAS_SUBSCRIPTION } from '@/graphql/queries'
+import { WORKFLOW_TREE_DELTAS_SUBSCRIPTION, WORKFLOW_CHEESE_DELTAS_SUBSCRIPTION } from '@/graphql/queries'
 import CylcTree from '@/components/cylc/tree/cylc-tree'
+import CylcCheese from '@/components/cylc/cheese/cylc-cheese'
 import { applyDeltas } from '@/components/cylc/tree/deltas'
+import { applyCheeseDeltas } from '@/components/cylc/cheese/deltas'
 import Alert from '@/model/Alert.model'
 import { each, iter } from '@lumino/algorithm'
 import TreeComponent from '@/components/cylc/tree/Tree.vue'
+import CheeseComponent from '@/components/cylc/cheese/Cheese.vue'
 import MutationsView from '@/views/Mutations'
 import Vue from 'vue'
 import Toolbar from '@/components/cylc/workflow/Toolbar.vue'
@@ -70,7 +86,8 @@ import CylcObjectMenu from '@/components/cylc/cylcObject/Menu'
 export default {
   mixins: [
     mixin,
-    datatree
+    datatree,
+    datacheese
   ],
   name: 'Workflow',
   props: {
@@ -83,6 +100,7 @@ export default {
     CylcObjectMenu,
     Lumino,
     TreeComponent,
+    CheeseComponent,
     MutationsView,
     Toolbar
   },
@@ -93,6 +111,7 @@ export default {
   },
   data: () => ({
     deltaSubscriptions: [],
+    deltaCheeseSubscriptions: [],
     /**
      * The CylcTree object, which receives delta updates. We must have only one for this
      * view, and it should contain data only while the tree subscription is active (i.e.
@@ -101,6 +120,7 @@ export default {
      * @type {CylcTree}
      */
     tree: new CylcTree(),
+    cheese: new CylcCheese(),
     isLoading: true,
     // the widgets added to the view
     /**
@@ -116,6 +136,12 @@ export default {
       return Object
         .entries(this.widgets)
         .filter(([id, type]) => type === TreeComponent.name)
+        .map(([id, type]) => id)
+    },
+    cheeseWidgets () {
+      return Object
+        .entries(this.widgets)
+        .filter(([id, type]) => type === CheeseComponent.name)
         .map(([id, type]) => id)
     },
     mutationsWidgets () {
@@ -139,6 +165,7 @@ export default {
     // stop delta subscription if any
     this.$workflowService.stopDeltasSubscription()
     this.tree.clear()
+    this.cheese.clear()
     // clear all widgets
     this.removeAllWidgets()
     next()
@@ -178,6 +205,27 @@ export default {
       this.deltaSubscriptions.push(id)
       return id
     },
+    subscribeCheeseDeltas () {
+      const id = new Date().getTime()
+      // start deltas subscription if not running
+      if (this.deltaCheeseSubscriptions.length === 0) {
+        const vm = this
+        this.$workflowService
+          .startDeltasSubscription(WORKFLOW_CHEESE_DELTAS_SUBSCRIPTION, this.variables, {
+            next: function next (response) {
+              applyCheeseDeltas(response.data.deltas, vm.cheese)
+              vm.isLoading = false
+            },
+            error: function error (err) {
+              vm.setAlert(new Alert(err.message, null, 'error'))
+              vm.isLoading = false
+            }
+          })
+      }
+      this.deltaCheeseSubscriptions.push(id)
+      return id
+    },
+
     /**
      * Add a new view widget.
      *
@@ -187,6 +235,9 @@ export default {
       if (view === 'tree') {
         const subscriptionId = this.subscribeDeltas()
         Vue.set(this.widgets, subscriptionId, TreeComponent.name)
+      } else if (view === 'cheese') {
+        const subscriptionId = this.subscribeCheeseDeltas()
+        Vue.set(this.widgets, subscriptionId, CheeseComponent.name)
       } else if (view === 'mutations') {
         Vue.set(this.widgets, (new Date()).getTime(), MutationsView.name)
       } else {
@@ -227,6 +278,13 @@ export default {
         if (this.deltaSubscriptions.length === 0) {
           this.$workflowService.stopDeltasSubscription()
           this.tree.clear()
+        }
+      } else if (vm.deltaCheeseSubscriptions.includes(subscriptionId)) {
+        // if this is a cheese widget with a deltas subscription, then stop it if the last widget using it
+        vm.deltaSubscriptions.splice(this.deltaSubscriptions.indexOf(subscriptionId), 1)
+        if (this.deltaCheeseSubscriptions.length === 0) {
+          this.$workflowService.stopCheeseSubscription()
+          this.cheese.clear()
         }
       }
       if (Object.entries(this.widgets).length === 0) {

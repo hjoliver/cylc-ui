@@ -21,6 +21,87 @@ import gql from 'graphql-tag'
 // eslint-disable-next-line no-unused-vars
 import { DocumentNode } from 'graphql'
 
+// WORKFLOW FRAGMENTS BEGIN
+
+const WORKFLOW_DATA = gql`
+fragment WorkflowData on Workflow {
+  id
+  name
+  status
+  owner
+  host
+  port
+}
+`
+
+const CYCLEPOINT_DATA = gql`
+fragment CyclePointData on FamilyProxy {
+  id
+  cyclePoint
+}
+`
+
+const FAMILY_PROXY_DATA = gql`
+fragment FamilyProxyData on FamilyProxy {
+  id
+  name
+  state
+  cyclePoint
+  firstParent {
+    id
+    name
+    cyclePoint
+    state
+  }
+}
+`
+
+const TASK_PROXY_DATA = gql`
+fragment TaskProxyData on TaskProxy {
+  id
+  name
+  state
+  isHeld
+  isQueued
+  cyclePoint
+  firstParent {
+    id
+    name
+    cyclePoint
+    state
+  }
+  task {
+    meanElapsedTime
+    name
+  }
+}
+`
+
+const JOB_DATA = gql`
+fragment JobData on Job {
+  id
+  firstParent: taskProxy {
+    id
+  }
+  jobRunnerName
+  jobId
+  platform
+  startedTime
+  submittedTime
+  finishedTime
+  state
+  submitNum
+  taskProxy {
+    outputs (satisfied: true, sort: { keys: ["time"], reverse: true}) {
+      label
+      message
+    }
+  }
+}
+`
+
+// WORKFLOW FRAGMENTS END
+
 // IMPORTANT: queries here may be used in the offline mode to create mock data. Before removing or renaming
 // queries here, please check under the services/mock folder for occurrences of the variable name.
 
@@ -102,76 +183,79 @@ fragment WorkflowTreePrunedData on Pruned {
 
 # WORKFLOW DATA BEGIN
 
-fragment WorkflowData on Workflow {
-  id
-  name
-  status
-  owner
-  host
-  port
-}
+${WORKFLOW_DATA}
 
-fragment CyclePointData on FamilyProxy {
-  id
-  cyclePoint
-}
+${CYCLEPOINT_DATA}
 
-fragment FamilyProxyData on FamilyProxy {
-  id
-  name
-  state
-  cyclePoint
-  firstParent {
-    id
-    name
-    cyclePoint
-    state
+${FAMILY_PROXY_DATA}
+
+${TASK_PROXY_DATA}
+
+${JOB_DATA}
+
+# WORKFLOW DATA END
+`
+const WORKFLOW_TABLE_DELTAS_SUBSCRIPTION = gql`
+subscription OnWorkflowDeltasData($workflowId: ID) {
+  deltas(workflows: [$workflowId], stripNull: true) {
+    ...WorkflowTableDeltas
   }
 }
 
-fragment TaskProxyData on TaskProxy {
+# TABLE DELTAS BEGIN
+
+fragment WorkflowTableDeltas on Deltas {
   id
-  name
-  state
-  isHeld
-  isQueued
-  cyclePoint
-  firstParent {
-    id
-    name
-    cyclePoint
-    state
+  shutdown
+  added {
+    ...WorkflowTableAddedData
   }
-  task {
-    meanElapsedTime
-    name
+  updated {
+    ...WorkflowTableUpdatedData
+  }
+  pruned {
+    ...WorkflowTablePrunedData
   }
 }
 
-fragment JobData on Job {
-  id
-  firstParent: taskProxy {
-    id
+fragment WorkflowTableAddedData on Added {
+  workflow {
+    ...WorkflowData
   }
-  jobRunnerName
-  jobId
-  platform
-  startedTime
-  submittedTime
-  finishedTime
-  state
-  submitNum
-  taskProxy {
-    outputs (satisfied: true, sort: { keys: ["time"], reverse: true}) {
-      label
-      message
+  taskProxies(sort: {keys: ["name"], reverse: false}, ghosts: true) {
+    ...TaskProxyData
+    jobs(sort: {keys: ["submit_num"], reverse: true}) {
+    ...JobData
     }
   }
 }
 
-# WORKFLOW DATA END
-`
+fragment WorkflowTableUpdatedData on Updated {
+  taskProxies(ghosts: true) {
+    ...TaskProxyData
+    jobs {
+     ...JobData
+    }
+  }
+}
 
+fragment WorkflowTablePrunedData on Pruned {
+  taskProxies
+}
+
+# TABLE DELTAS END
+
+# WORKFLOW DATA BEGINS
+
+${WORKFLOW_DATA}
+
+${TASK_PROXY_DATA}
+
+${JOB_DATA}
+
+# WORKFLOW DATA END
+
+`
 /**
  * Query used to retrieve data for the application Dashboard.
  * @type {string}
@@ -229,6 +313,7 @@ const WORKFLOWS_TABLE_QUERY = `
 
 export {
   WORKFLOW_TREE_DELTAS_SUBSCRIPTION,
+  WORKFLOW_TABLE_DELTAS_SUBSCRIPTION,
   DASHBOARD_QUERY,
   GSCAN_QUERY,
   WORKFLOWS_TABLE_QUERY

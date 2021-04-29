@@ -39,6 +39,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             :workflows="tree.root.children"
           />
         </v-skeleton-loader>
+        <v-skeleton-loader
+            v-for="widgetId of tableWidgets"
+            :key="widgetId"
+            :id="widgetId"
+            :loading="isLoading"
+            type="list-item-three-line"
+            tab-title="table"
+        >
+        <!-- <table-component-->
+        <!--    :workflows="table.root.children"-->
+        <!--  />-->
+        </v-skeleton-loader>
         <mutations-view
           v-for="widgetId of mutationsWidgets"
           :key="widgetId"
@@ -54,6 +66,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 <script>
 import { mixin } from '@/mixins'
 import { datatree } from '@/mixins/treeview'
+import { datatable } from '@/mixins/tableview'
 import { mapState } from 'vuex'
 import Lumino from '@/components/cylc/workflow/Lumino'
 import { WORKFLOW_TREE_DELTAS_SUBSCRIPTION } from '@/graphql/queries'
@@ -62,6 +75,7 @@ import { applyDeltas } from '@/components/cylc/tree/deltas'
 import Alert from '@/model/Alert.model'
 import { each, iter } from '@lumino/algorithm'
 import TreeComponent from '@/components/cylc/tree/Tree.vue'
+import TableComponent from '@/components/cylc/table/Table.vue'
 import MutationsView from '@/views/Mutations'
 import Vue from 'vue'
 import Toolbar from '@/components/cylc/workflow/Toolbar.vue'
@@ -70,7 +84,8 @@ import CylcObjectMenu from '@/components/cylc/cylcObject/Menu'
 export default {
   mixins: [
     mixin,
-    datatree
+    datatree,
+    datatable
   ],
   name: 'Workflow',
   props: {
@@ -93,6 +108,7 @@ export default {
   },
   data: () => ({
     deltaSubscriptions: [],
+    deltaTableSubscriptions: [],
     /**
      * The CylcTree object, which receives delta updates. We must have only one for this
      * view, and it should contain data only while the tree subscription is active (i.e.
@@ -118,6 +134,12 @@ export default {
         .filter(([id, type]) => type === TreeComponent.name)
         .map(([id, type]) => id)
     },
+    tableWidgets () {
+      return Object
+        .entries(this.widgets)
+        .filter(([id, type]) => type === TableComponent.name)
+        .map(([id, type]) => id)
+    },
     mutationsWidgets () {
       return Object
         .entries(this.widgets)
@@ -139,6 +161,7 @@ export default {
     // stop delta subscription if any
     this.$workflowService.stopDeltasSubscription()
     this.tree.clear()
+    this.table.clear()
     // clear all widgets
     this.removeAllWidgets()
     next()
@@ -152,6 +175,7 @@ export default {
   beforeRouteLeave (to, from, next) {
     this.$workflowService.stopDeltasSubscription()
     this.tree.clear()
+    this.table.clear()
     next()
   },
   methods: {
@@ -161,6 +185,20 @@ export default {
     subscribeDeltas () {
       const id = new Date().getTime()
       // start deltas subscription if not running
+      if (this.deltaSubscriptions.length === 0) {
+        const vm = this
+        this.$workflowService
+          .startDeltasSubscription(WORKFLOW_TREE_DELTAS_SUBSCRIPTION, this.variables, {
+            next: function next (response) {
+              applyDeltas(response.data.deltas, vm.tree)
+              vm.isLoading = false
+            },
+            error: function error (err) {
+              vm.setAlert(new Alert(err.message, null, 'error'))
+              vm.isLoading = false
+            }
+          })
+      }
       if (this.deltaSubscriptions.length === 0) {
         const vm = this
         this.$workflowService
@@ -187,6 +225,9 @@ export default {
       if (view === 'tree') {
         const subscriptionId = this.subscribeDeltas()
         Vue.set(this.widgets, subscriptionId, TreeComponent.name)
+      } else if (view === 'table') {
+        const subscriptionId = this.subscribeTableDeltas()
+        Vue.set(this.widgets, subscriptionId, TableComponent.name)
       } else if (view === 'mutations') {
         Vue.set(this.widgets, (new Date()).getTime(), MutationsView.name)
       } else {
@@ -227,10 +268,17 @@ export default {
         if (this.deltaSubscriptions.length === 0) {
           this.$workflowService.stopDeltasSubscription()
           this.tree.clear()
+        } else if (vm.deltaTableSubscriptions.includes(subscriptionId)) {
+          // if this is a table widget with a deltas subscription, then stop it if the last widget using it
+          vm.deltaSubscriptions.splice(this.deltaSubscriptions.indexOf(subscriptionId), 1)
+          if (this.deltaTableSubscriptions.length === 0) {
+            this.$workflowService.stopTableDeltasSubscription()
+            this.table.clear()
+          }
         }
-      }
-      if (Object.entries(this.widgets).length === 0) {
-        this.isLoading = true
+        if (Object.entries(this.widgets).length === 0) {
+          this.isLoading = true
+        }
       }
     }
   }

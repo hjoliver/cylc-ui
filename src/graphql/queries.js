@@ -197,6 +197,97 @@ ${JOB_DATA}
 `
 
 /**
+ * @type {DocumentNode}
+ */
+const WORKFLOW_TABLE_DELTAS_SUBSCRIPTION = gql`
+subscription OnWorkflowDeltasData ($workflowId: ID) {
+  deltas (workflows: [$workflowId], stripNull: true) {
+   ...WorkflowTableDeltas
+  }
+}
+
+# TABLE DELTAS BEGIN
+
+fragment WorkflowTableDeltas on Deltas {
+  id
+  shutdown
+  added {
+    ...WorkflowTableAddedData
+  }
+  updated {
+    ...WorkflowTableUpdatedData
+  }
+  pruned {
+    ...WorkflowTablePrunedData
+  }
+}
+
+fragment WorkflowTableAddedData on Added {
+  workflow {
+    ...WorkflowData
+    cyclePoints: familyProxies (ids: ["root"], ghosts: true) {
+      ...CyclePointData
+    }
+    taskProxies (sort: { keys: ["name"], reverse: false }, ghosts: true) {
+      ...TaskProxyData
+      jobs(sort: { keys: ["submit_num"], reverse:true }) {
+        ...JobData
+      }
+    }
+    familyProxies (exids: ["root"], sort: { keys: ["name"] }, ghosts: true) {
+      ...FamilyProxyData
+    }
+  }
+  cyclePoints: familyProxies (ids: ["root"], ghosts: true) {
+    ...CyclePointData
+  }
+  familyProxies (exids: ["root"], sort: { keys: ["name"] }, ghosts: true) {
+    ...FamilyProxyData
+  }
+  taskProxies (sort: { keys: ["name"], reverse: false }, ghosts: true) {
+    ...TaskProxyData
+  }
+  jobs (sort: { keys: ["submit_num"], reverse:true }) {
+    ...JobData
+  }
+}
+
+fragment WorkflowTableUpdatedData on Updated {
+  taskProxies (ghosts: true) {
+    ...TaskProxyData
+  }
+  jobs {
+    ...JobData
+  }
+  familyProxies (exids: ["root"], ghosts: true) {
+    ...FamilyProxyData
+  }
+}
+
+fragment WorkflowTablePrunedData on Pruned {
+  jobs
+  taskProxies
+  familyProxies
+}
+
+# TABLE DELTAS END
+
+# WORKFLOW DATA BEGIN
+
+${WORKFLOW_DATA}
+
+${CYCLEPOINT_DATA}
+
+${FAMILY_PROXY_DATA}
+
+${TASK_PROXY_DATA}
+
+${JOB_DATA}
+
+# WORKFLOW DATA END
+`
+
+/**
  * Query used to retrieve data for the application Dashboard.
  * @type {string}
  */
@@ -253,6 +344,7 @@ const WORKFLOWS_TABLE_QUERY = `
 
 export {
   WORKFLOW_TREE_DELTAS_SUBSCRIPTION,
+  WORKFLOW_TABLE_DELTAS_SUBSCRIPTION,
   DASHBOARD_QUERY,
   GSCAN_QUERY,
   WORKFLOWS_TABLE_QUERY

@@ -33,7 +33,7 @@ import mixin from '@/mixins'
 import graphqlMixin from '@/mixins/graphql'
 import alertsMixin from '@/mixins/alerts'
 import TableComponent from '@/components/cylc/table/Table'
-import { WORKFLOW_TREE_DELTAS_SUBSCRIPTION } from '@/graphql/queries'
+import { WORKFLOW_TABLE_DELTAS_SUBSCRIPTION } from '@/graphql/queries'
 import Alert from '@/model/Alert.model'
 import CylcObjectMenu from '@/components/cylc/cylcObject/Menu'
 import { applyTableDeltas } from '@/components/cylc/table/deltas'
@@ -87,7 +87,7 @@ export default {
     next(vm => {
       vm
         .$workflowService
-        .startDeltasSubscription(WORKFLOW_TREE_DELTAS_SUBSCRIPTION, vm.variables, {
+        .startDeltasSubscription(WORKFLOW_TABLE_DELTAS_SUBSCRIPTION, vm.variables, {
           next: function next (response) {
             applyTableDeltas(vm.tasks, response.data.deltas)
           },
@@ -110,7 +110,7 @@ export default {
     this.$nextTick(() => {
       vm
         .$workflowService
-        .startDeltasSubscription(WORKFLOW_TREE_DELTAS_SUBSCRIPTION, vm.variables, {
+        .startDeltasSubscription(WORKFLOW_TABLE_DELTAS_SUBSCRIPTION, vm.variables, {
           next: function next (response) {
             applyTableDeltas(vm.tasks, response.data.deltas)
           },

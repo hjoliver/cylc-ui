@@ -31,16 +31,16 @@ export const applyTableDeltas = (tasks, data) => {
   const added = data.added
   const pruned = data.pruned
   const updated = data.updated
-  if (added && added.workflow) {
-    if (added.workflow.taskProxies) {
-      for (const taskProxy of added.workflow.taskProxies) {
+  if (added) {
+    if (added.taskProxies) {
+      for (const taskProxy of added.taskProxies) {
         if (!tasks[taskProxy.id]) {
           Vue.set(tasks, taskProxy.id, createTaskProxyNode(taskProxy))
         }
       }
     }
-    if (added.workflow.jobs) {
-      for (const job of added.workflow.jobs) {
+    if (added.jobs) {
+      for (const job of added.jobs) {
         const existingTask = tasks[job.firstParent.id]
         if (existingTask) {
           const children = existingTask.children

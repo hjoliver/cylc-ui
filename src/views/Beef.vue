@@ -39,7 +39,7 @@ import BeefComponent from '@/components/cylc/beef/Beef.vue'
 import CylcBeef from '@/components/cylc/beef/cylc-beef'
 import { WORKFLOW_BEEF_DELTAS_SUBSCRIPTION } from '@/graphql/queries'
 import Alert from '@/model/Alert.model'
-import { applyDeltas } from '@/components/cylc/beef/deltas'
+import { applyBeefDeltas } from '@/components/cylc/beef/deltas'
 import CylcObjectMenu from '@/components/cylc/cylcObject/Menu'
 
 export default {
@@ -94,7 +94,7 @@ export default {
         .$workflowService
         .startDeltasSubscription(WORKFLOW_BEEF_DELTAS_SUBSCRIPTION, vm.variables, {
           next: function next (response) {
-            applyDeltas(response.data.deltas, vm.beef)
+            applyBeefDeltas(response.data.deltas, vm.beef)
           },
           error: function error (err) {
             vm.setAlert(new Alert(err.message, null, 'error'))
@@ -118,7 +118,7 @@ export default {
         .$workflowService
         .startDeltasSubscription(WORKFLOW_BEEF_DELTAS_SUBSCRIPTION, vm.variables, {
           next: function next (response) {
-            applyDeltas(response.data.deltas, vm.beef)
+            applyBeefDeltas(response.data.deltas, vm.beef)
           },
           error: function error (err) {
             vm.setAlert(new Alert(err.message, null, 'error'))

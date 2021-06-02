@@ -39,6 +39,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             :workflows="tree.root.children"
           />
         </v-skeleton-loader>
+        <v-skeleton-loader
+          v-for="widgetId of beefWidgets"
+          :key="widgetId"
+          :id="widgetId"
+          :loading="isLoading"
+          type="list-item-three-line"
+          tab-title="beef"
+        >
+          <beef-component
+            :workflows="beef.root.children"
+          />
+        </v-skeleton-loader>
         <mutations-view
           v-for="widgetId of mutationsWidgets"
           :key="widgetId"
@@ -54,14 +66,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 <script>
 import { mixin } from '@/mixins'
 import { datatree } from '@/mixins/treeview'
+import { databeef } from '@/mixins/beefview'
 import { mapState } from 'vuex'
 import Lumino from '@/components/cylc/workflow/Lumino'
-import { WORKFLOW_TREE_DELTAS_SUBSCRIPTION } from '@/graphql/queries'
+import { WORKFLOW_TREE_DELTAS_SUBSCRIPTION, WORKFLOW_BEEF_DELTAS_SUBSCRIPTION } from '@/graphql/queries'
 import CylcTree from '@/components/cylc/tree/cylc-tree'
+import CylcBeef from '@/components/cylc/beef/cylc-beef'
 import { applyDeltas } from '@/components/cylc/tree/deltas'
+import { applyBeefDeltas } from '@/components/cylc/beef/deltas'
 import Alert from '@/model/Alert.model'
 import { each, iter } from '@lumino/algorithm'
 import TreeComponent from '@/components/cylc/tree/Tree.vue'
+import BeefComponent from '@/components/cylc/beef/Beef.vue'
 import MutationsView from '@/views/Mutations'
 import Vue from 'vue'
 import Toolbar from '@/components/cylc/workflow/Toolbar.vue'
@@ -70,7 +86,8 @@ import CylcObjectMenu from '@/components/cylc/cylcObject/Menu'
 export default {
   mixins: [
     mixin,
-    datatree
+    datatree,
+    databeef
   ],
   name: 'Workflow',
   props: {
@@ -83,6 +100,7 @@ export default {
     CylcObjectMenu,
     Lumino,
     TreeComponent,
+    BeefComponent,
     MutationsView,
     Toolbar
   },
@@ -93,6 +111,7 @@ export default {
   },
   data: () => ({
     deltaSubscriptions: [],
+    deltaBeefSubscriptions: [],
     /**
      * The CylcTree object, which receives delta updates. We must have only one for this
      * view, and it should contain data only while the tree subscription is active (i.e.
@@ -102,6 +121,16 @@ export default {
      */
     tree: new CylcTree(null, {
       cyclePointsOrderDesc: localStorage.cyclePointsOrderDesc ? JSON.parse(localStorage.cyclePointsOrderDesc) : CylcTree.DEFAULT_CYCLE_POINTS_ORDER_DESC
+    }),
+    /**
+     * The CylcBeef object, which receives delta updates. We must have only one for this
+     * view, and it should contain data only while the beef subscription is active (i.e.
+     * there are beef widgets added to the Lumino component).
+     *
+     * @type {CylcBeef}
+     */
+    beef: new CylcBeef(null, {
+      cyclePointsOrderDesc: localStorage.cyclePointsOrderDesc ? JSON.parse(localStorage.cyclePointsOrderDesc) : CylcBeef.DEFAULT_CYCLE_POINTS_ORDER_DESC
     }),
     isLoading: true,
     // the widgets added to the view
@@ -118,6 +147,12 @@ export default {
       return Object
         .entries(this.widgets)
         .filter(([id, type]) => type === TreeComponent.name)
+        .map(([id, type]) => id)
+    },
+    beefWidgets () {
+      return Object
+        .entries(this.widgets)
+        .filter(([id, type]) => type === BeefComponent.name)
         .map(([id, type]) => id)
     },
     mutationsWidgets () {
@@ -180,6 +215,26 @@ export default {
       this.deltaSubscriptions.push(id)
       return id
     },
+    subscribeBeefDeltas () {
+      const id = new Date().getTime()
+      // start deltas subscription if not running
+      if (this.deltaBeefSubscriptions.length === 0) {
+        const vm = this
+        this.$workflowService
+          .startDeltasSubscription(WORKFLOW_BEEF_DELTAS_SUBSCRIPTION, this.variables, {
+            next: function next (response) {
+              applyBeefDeltas(response.data.deltas, vm.beef)
+              vm.isLoading = false
+            },
+            error: function error (err) {
+              vm.setAlert(new Alert(err.message, null, 'error'))
+              vm.isLoading = false
+            }
+          })
+      }
+      this.deltaSubscriptions.push(id)
+      return id
+    },
     /**
      * Add a new view widget.
      *
@@ -189,6 +244,9 @@ export default {
       if (view === 'tree') {
         const subscriptionId = this.subscribeDeltas()
         Vue.set(this.widgets, subscriptionId, TreeComponent.name)
+      } else if (view === 'beef') {
+        const subscriptionId = this.subscribeBeefDeltas()
+        Vue.set(this.widgets, subscriptionId, BeefComponent.name)
       } else if (view === 'mutations') {
         Vue.set(this.widgets, (new Date()).getTime(), MutationsView.name)
       } else {
@@ -229,6 +287,14 @@ export default {
         if (this.deltaSubscriptions.length === 0) {
           this.$workflowService.stopDeltasSubscription()
           this.tree.clear()
+        }
+      }
+      if (vm.deltaBeefSubscriptions.includes(subscriptionId)) {
+        // if this is a beef widget with a deltas subscription, then stop it if the last widget using it
+        vm.deltaBeefSubscriptions.splice(this.deltaBeefSubscriptions.indexOf(subscriptionId), 1)
+        if (this.deltaBeefSubscriptions.length === 0) {
+          this.$workflowService.stopDeltasSubscription()
+          this.beef.clear()
         }
       }
       if (Object.entries(this.widgets).length === 0) {

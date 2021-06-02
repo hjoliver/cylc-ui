@@ -204,7 +204,7 @@ function handleDeltas (deltas, beef) {
  * @param {?Deltas} deltas
  * @param {?CylcBeef} beef
  */
-export function applyDeltas (deltas, beef) {
+export function applyBeefDeltas (deltas, beef) {
   if (deltas && beef) {
     // first we check whether it is a shutdown response
     if (deltas.shutdown) {

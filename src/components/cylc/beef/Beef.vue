@@ -19,119 +19,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   <v-container
     class="ma-0 pa-2"
   >
-    <!-- Toolbar -->
-    <v-row
-      no-gutters
-      class="d-flex flex-wrap"
-    >
-      <!-- Filters -->
-      <v-col
-        v-if="filterable"
-        class="grow"
-      >
-        <v-row
-          no-gutters
-        >
-          <v-col
-            cols="12"
-            md="5"
-            class="pr-md-2 mb-2 mb-md-0"
-          >
-            <v-text-field
-              id="c-beef-filter-task-name"
-              clearable
-              dense
-              flat
-              hide-details
-              outlined
-              placeholder="Filter by task name"
-              v-model="tasksFilter.name"
-            ></v-text-field>
-          </v-col>
-          <v-col
-            cols="12"
-            md="5"
-            class="pr-md-2 mb-2 mb-md-0"
-          >
-            <v-select
-              id="c-beef-filter-task-states"
-              :items="taskStates"
-              clearable
-              dense
-              flat
-              hide-details
-              multiple
-              outlined
-              placeholder="Filter by task state"
-              v-model="tasksFilter.states"
-            >
-              <template v-slot:item="slotProps">
-                <Task :status="slotProps.item.value"/>
-                <span class="ml-2">{{ slotProps.item.value }}</span>
-              </template>
-              <template v-slot:selection="slotProps">
-                <div class="mr-2" v-if="slotProps.index >= 0 && slotProps.index < maximumTasks">
-                  <Task :status="slotProps.item.value"/>
-                </div>
-                <span
-                  v-if="slotProps.index === maximumTasks"
-                  class="grey--text caption"
-                >
-            (+{{ tasksFilter.states.length - maximumTasks }})
-          </span>
-              </template>
-            </v-select>
-          </v-col>
-          <v-col
-            cols="12"
-            md="2">
-            <!-- TODO: we shouldn't need to set the height (px) here, but for some reason the Vuetify
-                       components don't seem to agree on the height here -->
-            <v-btn
-              id="c-beef-filter-btn"
-              height="40"
-              block
-              outlined
-              @click="filterTasks"
-            >Filter</v-btn>
-          </v-col>
-        </v-row>
-      </v-col>
-      <!-- Expand, collapse all -->
-      <v-col
-        v-if="expandCollapseToggle"
-        class="shrink"
-      >
-        <div
-          class="d-flex flex-nowrap"
-        >
-          <v-tooltip bottom>
-            <template v-slot:activator="{ on }">
-              <v-btn
-                v-on="on"
-                @click="expandAll((beefitem) => !['task-proxy', 'job', 'job-details'].includes(beefitem.node.type))"
-                icon
-              >
-                <v-icon>{{ svgPaths.expandIcon }}</v-icon>
-              </v-btn>
-            </template>
-            <span>Expand all</span>
-          </v-tooltip>
-          <v-tooltip bottom>
-            <template v-slot:activator="{ on }">
-              <v-btn
-                v-on="on"
-                @click="collapseAll()"
-                icon
-              >
-                <v-icon>{{ svgPaths.collapseIcon }}</v-icon>
-              </v-btn>
-            </template>
-            <span>Collapse all</span>
-          </v-tooltip>
-        </div>
-      </v-col>
-    </v-row>
     <!-- Beef component -->
     <v-row
       no-gutters
@@ -159,7 +46,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import BeefItem from '@/components/cylc/beef/BeefItem'
 import Vue from 'vue'
 import TaskState from '@/model/TaskState.model'
-import Task from '@/components/cylc/Task'
 import cloneDeep from 'lodash/cloneDeep'
 import { mdiPlus, mdiMinus } from '@mdi/js'
 
@@ -183,7 +69,6 @@ export default {
     }
   },
   components: {
-    Task,
     'beef-item': BeefItem
   },
   data () {

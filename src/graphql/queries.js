@@ -225,24 +225,9 @@ fragment WorkflowTableDeltas on Deltas {
 fragment WorkflowTableAddedData on Added {
   workflow {
     ...WorkflowData
-    cyclePoints: familyProxies (ids: ["root"], ghosts: true) {
-      ...CyclePointData
-    }
-    taskProxies (sort: { keys: ["name"], reverse: false }, ghosts: true) {
-      ...TaskProxyData
-      jobs(sort: { keys: ["submit_num"], reverse:true }) {
-        ...JobData
-      }
-    }
-    familyProxies (exids: ["root"], sort: { keys: ["name"] }, ghosts: true) {
-      ...FamilyProxyData
-    }
   }
   cyclePoints: familyProxies (ids: ["root"], ghosts: true) {
     ...CyclePointData
-  }
-  familyProxies (exids: ["root"], sort: { keys: ["name"] }, ghosts: true) {
-    ...FamilyProxyData
   }
   taskProxies (sort: { keys: ["name"], reverse: false }, ghosts: true) {
     ...TaskProxyData
@@ -259,15 +244,11 @@ fragment WorkflowTableUpdatedData on Updated {
   jobs {
     ...JobData
   }
-  familyProxies (exids: ["root"], ghosts: true) {
-    ...FamilyProxyData
-  }
 }
 
 fragment WorkflowTablePrunedData on Pruned {
   jobs
   taskProxies
-  familyProxies
 }
 
 # TABLE DELTAS END
@@ -277,8 +258,6 @@ fragment WorkflowTablePrunedData on Pruned {
 ${WORKFLOW_DATA}
 
 ${CYCLEPOINT_DATA}
-
-${FAMILY_PROXY_DATA}
 
 ${TASK_PROXY_DATA}
 

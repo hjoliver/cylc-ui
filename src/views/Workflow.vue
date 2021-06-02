@@ -70,7 +70,7 @@ import treeViewMixin from '@/mixins/treeview'
 import alertsMixin from '@/mixins/alerts'
 import { mapState } from 'vuex'
 import Lumino from '@/components/cylc/workflow/Lumino'
-import { WORKFLOW_TREE_DELTAS_SUBSCRIPTION } from '@/graphql/queries'
+import { WORKFLOW_TREE_DELTAS_SUBSCRIPTION, WORKFLOW_TABLE_DELTAS_SUBSCRIPTION } from '@/graphql/queries'
 import CylcTree from '@/components/cylc/tree/cylc-tree'
 import { applyDeltas } from '@/components/cylc/tree/deltas'
 import { applyTableDeltas } from '@/components/cylc/table/deltas'
@@ -113,6 +113,7 @@ export default {
   },
   data: () => ({
     deltaSubscriptions: [],
+    deltaTableSubscriptions: [],
     /**
      * The CylcTree object, which receives delta updates. We must have only one for this
      * view, and it should contain data only while the tree subscription is active (i.e.
@@ -192,6 +193,23 @@ export default {
     subscribeDeltas () {
       const id = new Date().getTime()
       // start deltas subscription if not running
+      if (this.deltaTableSubscriptions.length === 0) {
+        const vm = this
+        this.$workflowService
+          .startDeltasSubscription(WORKFLOW_TABLE_DELTAS_SUBSCRIPTION, this.variables, {
+            next: function next (response) {
+              Object.values(vm.deltasCallbacks).forEach(deltasCallback => {
+                deltasCallback(response.data.deltas)
+              })
+              vm.isLoading = false
+            },
+            error: function error (err) {
+              vm.setAlert(new Alert(err.message, null, 'error'))
+              vm.isLoading = false
+            }
+          })
+      }
+      this.deltaTableSubscriptions.push(id)
       if (this.deltaSubscriptions.length === 0) {
         const vm = this
         this.$workflowService
@@ -270,20 +288,25 @@ export default {
           delete this.deltasCallbacks[TreeComponent.name]
           this.tree.clear()
         }
+        // TODO: not needed?
+        if (Object.entries(this.widgets).length === 0) {
+          this.isLoading = true
+        }
+      } else if (vm.deltaTableSubscriptions.includes(subscriptionId)) {
+        vm.deltaTableSubscriptions.splice(this.deltaTableSubscriptions.indexOf(subscriptionId), 1)
+        // if there are no more tree widgets, we want to remove the tree-deltas-callback
         if (this.tableWidgets.length === 0) {
           delete this.deltasCallbacks[TableComponent.name]
-          Object.keys(this.table).forEach(key => delete this.table[key])
-        }
-        // if there are no more widgets in the UI after this, then we want to stop the subscriptions
-        if (this.deltaSubscriptions.length === 0) {
-          this.$workflowService.stopDeltasSubscription()
-          this.tree.clear()
           Object.keys(this.table).forEach(key => delete this.table[key])
         }
         // TODO: not needed?
         if (Object.entries(this.widgets).length === 0) {
           this.isLoading = true
         }
+      }
+      // if there are no more widgets in the UI after this, then we want to stop the subscriptions
+      if (this.deltaSubscriptions.length === 0 && this.deltaTableSubscriptions.length === 0) {
+        this.$workflowService.stopDeltasSubscription()
       }
     }
   }

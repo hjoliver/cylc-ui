@@ -128,6 +128,7 @@ import WorkflowState from '@/model/WorkflowState.model'
 import {
   mdiAppleKeyboardCommand,
   mdiFileTree,
+  mdiFood,
   mdiMicrosoftXboxControllerMenu,
   mdiPause,
   mdiPlay,
@@ -169,6 +170,11 @@ export default {
         title: 'Tree',
         icon: mdiFileTree
 
+      },
+      {
+        name: 'beef',
+        title: 'Beef',
+        icon: mdiFood
       },
       {
         name: 'mutations',

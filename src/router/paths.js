@@ -77,6 +77,16 @@ export default [
     props: true
   },
   {
+    path: '/beef/:workflowName(.*)',
+    view: 'Beef',
+    name: 'beef',
+    meta: {
+      layout: 'default',
+      toolbar: true
+    },
+    props: true
+  },
+  {
     path: '/guide',
     name: 'Guide',
     view: 'Guide',

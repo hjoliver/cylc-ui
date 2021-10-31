@@ -38,7 +38,10 @@
         text-overflow: ellipsis;
       }
       .c-gscan-workflow-states {
-        span.empty-state {
+        span.empty-state-1 {
+          opacity: 0.1;
+        }
+        span.empty-state-2 {
           opacity: 0.2;
         }
       }

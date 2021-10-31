@@ -435,7 +435,9 @@ export default {
 
     getTaskStateClasses (workflow, state) {
       const tasksInState = this.countTasksInState(workflow, state)
-      return tasksInState === 0 ? ['empty-state'] : []
+      if (tasksInState === 0) {
+        return [TaskState.SUBMIT_FAILED.name, TaskState.FAILED.name].includes(state) ? ['empty-state-1'] : ['empty-state-2']
+      }
     },
 
     // TODO: temporary filter, remove after b0 - https://github.com/cylc/cylc-ui/pull/617#issuecomment-805343847

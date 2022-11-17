@@ -70,7 +70,7 @@ jobs:
           node-version: '16'
 
       - name: e2e
-        uses: cypress-io/github-action@v2
+        uses: cypress-io/github-action@v4
         with:
           start: yarn run serve
           wait-on: http://localhost:8080/

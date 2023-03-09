@@ -6146,7 +6146,7 @@ __metadata:
     nprogress: ^1.0.0-1
     nyc: ^15.1.0
     postcss: ^8.3.6
-    preact: ^10.5.14
+    preact: ^10.13.1
     preact-compat: ^3.19.0
     regenerator-runtime: ^0.13.7
     sass: ~1.43.4
@@ -13947,10 +13947,10 @@ fsevents@~2.3.2:
   languageName: node
   linkType: hard
 
-"preact@npm:^10.5.14":
-  version: 10.5.15
-  resolution: "preact@npm:10.5.15"
-  checksum: 1c9f025ed6ff9c6cbe85da4feb88011795914d615244089396d1157376897a09f478eac0d582c66bc5a96c2841ebd9f8dfbe0a28e8c1820bdd7c314083350d40
+"preact@npm:^10.13.1":
+  version: 10.13.1
+  resolution: "preact@npm:10.13.1"
+  checksum: a10555d18f60a42e29b4ef5bf42f7a6ce4097a2e772c047fab53226e3edef4cfceb6d709452485a41017479750aa6834ab02b6a8269ceb06d489d7c3495b3d04
   languageName: node
   linkType: hard
 
